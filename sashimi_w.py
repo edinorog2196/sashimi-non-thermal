@@ -416,7 +416,7 @@ class subhalos:
 
     def Na_calc(self, ma, zacc, Mhost, z0=0, N_herm=200, Nrand=1000, sigmafac=0):
         """ Returns Na, Eq. (3) of Yang et al. (2011) """ 
-        zacc_2d = zacc.reshape(np.alen(zacc),1)
+        zacc_2d = zacc.reshape(len(zacc),1)
         M200_0 = self.Mzzi(Mhost,zacc_2d,z0)
         logM200_0 = np.log10(M200_0)
         if N_herm==1:
@@ -431,8 +431,8 @@ class subhalos:
                 M200 = np.where(M200<Mhost,M200,Mhost)
         else:
             xxi,wwi = hermgauss(N_herm)
-            xxi = xxi.reshape(np.alen(xxi),1,1)
-            wwi = wwi.reshape(np.alen(wwi),1,1)
+            xxi = xxi.reshape(len(xxi),1,1)
+            wwi = wwi.reshape(len(wwi),1,1)
             """ eq. (21) in Yang et al. (2011) """ 
             sigmalogM200 = 0.12-0.15*np.log10(M200_0/Mhost)
             logM200 = np.sqrt(2)*sigmalogM200*xxi+logM200_0
@@ -441,8 +441,8 @@ class subhalos:
         Mmax=np.minimum(M200_0+mmax,Mhost)
         zlist = zacc_2d*np.linspace(1,0,Nrand)
         iMmax = np.argmin(np.abs(self.Mzzi(Mhost,zlist,z0)-Mmax),axis=-1)
-        z_Max = zlist[np.arange(np.alen(zlist)),iMmax]
-        z_Max_3d = z_Max.reshape(N_herm,np.alen(zlist),1)
+        z_Max = zlist[np.arange(len(zlist)),iMmax]
+        z_Max_3d = z_Max.reshape(N_herm,len(zlist),1)
         delcM = self.delc_Y11(Mmax,z_Max_3d)
         delca = self.delc_Y11(ma,zacc_2d)
         sM = self.s_Y11(Mmax)
@@ -527,8 +527,8 @@ class subhalos:
                 *200*4*np.pi,-1),1.0/3.0)
             c_mz = c200sub*rvirsub/r200sub
             x1,w1 = hermgauss(N_herm)
-            x1 = x1.reshape(np.alen(x1),1)
-            w1 = w1.reshape(np.alen(w1),1)
+            x1 = x1.reshape(len(x1),1)
+            w1 = w1.reshape(len(w1),1)
             log10c_sub = np.sqrt(2)*sigmalogc*x1+np.log10(c_mz)
             c_sub = pow(10.0,log10c_sub)
             rs_acc[iz] = rvirsub/c_sub
@@ -552,7 +552,7 @@ class subhalos:
         Na = self.Na_calc(ma,zdist,M0,z0=0,N_herm=N_hermNa,Nrand=1000,
                           sigmafac=sigmafac)
         Na_total = integrate.simps(integrate.simps(Na,x=np.log(ma)),x=np.log(1+zdist))
-        weight = Na/(1.0+zdist.reshape(np.alen(zdist),1))
+        weight = Na/(1.0+zdist.reshape(len(zdist),1))
         weight = weight/np.sum(weight)*Na_total
         weight = (weight.reshape((len(zdist),1,len(ma))))*w1/np.sqrt(np.pi)
         z_acc = (zdist.reshape(len(zdist),1,1))*np.ones((1,N_herm,N_ma))

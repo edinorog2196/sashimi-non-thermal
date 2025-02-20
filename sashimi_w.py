@@ -86,13 +86,17 @@ class subhalos:
         self.filter_Mass   = 10**self.logM0
         self.R             = cbrt(self.filter_Mass / (4/3 * np.pi * self.Rhomean_z)) / 2.5 # Mpc/h Sharp-k filter, Schneider (2014) 
 
+
+        """ Transfer function WDM Power Spectrum, Viel et al. (2011) """ 
+        self.a             = 0.049*(1/self.mass_wdm)**1.11 * (OmegaC/0.25)**0.11 * (h/0.7)**1.22 # Mpc/h
+
+
         """ Integrate Pk and obtain Sigma(M) with sharp-k filter """ 
         self.log_k_min     = np.log10(k_min)
         self.log_k_max     = np.log10((9*np.pi/2)**(1./3)/self.R)
         self.dlogk         = (self.log_k_max - self.log_k_min)/(500 - 1)
         self.tot_sum       = 0.
-        """ Transfer function WDM Power Spectrum, Viel et al. (2011) """ 
-        self.a             = 0.049*(1/self.mass_wdm)**1.11 * (OmegaC/0.25)**0.11 * (h/0.7)**1.22 # Mpc/h
+       
         for ii in range(500):
             self.logk      = self.log_k_min + self.dlogk*ii
             self.sum_rect  = Pk_interp(10**self.logk)*(10**self.logk)**2*10**self.logk*np.log(10) * \
@@ -117,6 +121,48 @@ class subhalos:
         self.Sigma_Sq      = self.Sigma**2 
         self.Sigma_interp  = interp1d(self.filter_Mass,self.Sigma)  
 
+
+    def N_sub_PS(self, Mhalo, Msub_min,Msub_max):
+        # obtain Rhalo from Mhalo
+        # Rhalo = cbrt(Mhalo / (4/3 * np.pi * self.Rhomean_z)) / 2.5 # Mpc/h Sharp-k filter, Schneider (2014) 
+        Cn = 44.5
+        """ Integrate dNsub/dMsub in Msub to get Nsub """ 
+        log_M_min     = np.log10(Msub_min)
+        log_M_max     = np.log10(Msub_max)
+        dlogM         = (log_M_max - log_M_min)/(500 - 1)
+        tot_sum       = 0.
+
+        # we have the function sig_interp which is able to give us Shalo and Ssub
+        Shalo = self.sig_interp(Mhalo)
+        for ii in range(500):
+            log_M =  log_M_min + ii * dlogM 
+            Msub = 10**log_M
+            Ssub  =  self.sig_interp(Msub)
+            Rsub  = cbrt(Msub / (4/3 * np.pi * self.Rhomean_z)) / 2.5 # Mpc/h Sharp-k filter, Schneider (2014) 
+            sum_rect = 1/Cn/6/np.pi**2/Rsub**3 * Mhalo/Msub**2 \
+                       * Pk_interp(1/Rsub)* (1+(self.a*(1/Rsub))**(2*1.12))**(-5./1.12) \
+                       /np.sqrt(2*np.pi * (Ssub - Shalo)) * Msub * np.log(10)
+            tot_sum += sum_rect
+
+        log_M_min = log_M_min - dlogM
+        Msub_min  = 10**log_M_min
+        Rsub_min  = cbrt(Msub_min / (4/3 * np.pi * self.Rhomean_z)) / 2.5 # Mpc/h Sharp-k filter, Schneider (2014) 
+        Ssub_min  =  self.sig_interp(Msub_min)
+        sum_rect_min = 1/Cn/6/np.pi**2/Rsub_min**3 * Mhalo/Msub_min**2 \
+                        * Pk_interp(1/Rsub_min) * (1+(self.a*(1/Rsub_min))**(2*1.12))**(-5./1.12)\
+                       /np.sqrt(2*np.pi * (Ssub_min - Shalo)) * Msub_min * np.log(10)
+        log_M_max = log_M_max + dlogM
+        Msub_max  = 10**log_M_max
+        Rsub_max  = cbrt(Msub_max / (4/3 * np.pi * self.Rhomean_z)) / 2.5 # Mpc/h Sharp-k filter, Schneider (2014) 
+        Ssub_max  =  self.sig_interp(Msub_max)
+        sum_rect_max = 1/Cn/6/np.pi**2/Rsub_max**3 * Mhalo/Msub_max**2\
+                        * Pk_interp(1/Rsub_max) * (1+(self.a*(1/Rsub_max))**(2*1.12))**(-5./1.12) \
+                       /np.sqrt(2*np.pi * (Ssub_max - Shalo)) * Msub_max * np.log(10)
+
+        Nsat     = (tot_sum + 0.5*sum_rect_min + 0.5*sum_rect_max) * dlogM
+        
+        # h because integration masses were in Msolar
+        return Nsat 
 
     def dlnSigmadlnM_interp(self, M):
         lnSigma_Sq  = np.log(self.Sigma)
